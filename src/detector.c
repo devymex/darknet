@@ -185,7 +185,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     }
     //printf(" imgs = %d \n", imgs);
 
-    pthread_t load_thread = load_data(args);
+    pthread_t load_thread = 0; //load_data(args);
 
     int count = 0;
     double time_remaining, avg_time = -1, alpha_time = 0.01;
