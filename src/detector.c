@@ -247,14 +247,13 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
             net = nets[0];
         }
         double time = what_time_is_it_now();
-        pthread_join(load_thread, 0);
+        load_threads(&args);
         train = buffer;
         if (net.track) {
             net.sequential_subdivisions = get_current_seq_subdivisions(net);
             args.threads = net.sequential_subdivisions * ngpus;
             printf(" sequential_subdivisions = %d, sequence = %d \n", net.sequential_subdivisions, get_sequence_value(net));
         }
-        load_thread = load_data(args);
         //wait_key_cv(500);
 
         /*

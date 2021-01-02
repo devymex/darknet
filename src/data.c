@@ -1663,7 +1663,7 @@ void *load_threads(void *ptr)
     if (args.threads == 0) args.threads = 1;
     data *out = args.d;
     int total = args.n;
-    free(ptr);
+    //free(ptr);
     data* buffers = (data*)xcalloc(args.threads, sizeof(data));
     if (!threads) {
         threads = (pthread_t*)xcalloc(args.threads, sizeof(pthread_t));
