@@ -1608,7 +1608,7 @@ void *load_thread(void *ptr)
     } else if (a.type == TAG_DATA){
         *a.d = load_data_tag(a.paths, a.n, a.m, a.classes, a.flip, a.min, a.max, a.w, a.h, a.angle, a.aspect, a.hue, a.saturation, a.exposure);
     }
-    free(ptr);
+    //free(ptr);
     return 0;
 }
 
@@ -1681,15 +1681,16 @@ void *load_threads(void *ptr)
     for (i = 0; i < args.threads; ++i) {
         args.d = buffers + i;
         args.n = (i + 1) * total / args.threads - i * total / args.threads;
+		load_thread(&args);
 
         pthread_mutex_lock(&mtx_load_data);
         args_swap[i] = args;
         pthread_mutex_unlock(&mtx_load_data);
 
-        custom_atomic_store_int(&run_load_data[i], 1);  // run thread
+        //custom_atomic_store_int(&run_load_data[i], 1);  // run thread
     }
     for (i = 0; i < args.threads; ++i) {
-        while (custom_atomic_load_int(&run_load_data[i])) this_thread_sleep_for(thread_wait_ms); //   join
+        //while (custom_atomic_load_int(&run_load_data[i])) this_thread_sleep_for(thread_wait_ms); //   join
     }
 
     /*
