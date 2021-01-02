@@ -118,6 +118,7 @@ data concat_data(data d1, data d2);
 data concat_datas(data *d, int n);
 void fill_truth(char *path, char **labels, int k, float *truth);
 void fill_truth_smooth(char *path, char **labels, int k, float *truth, float label_smooth_eps);
+void *load_threads(void *ptr);
 #ifdef __cplusplus
 }
 
