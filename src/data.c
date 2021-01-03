@@ -1048,7 +1048,7 @@ void blend_truth_mosaic(float *new_truth, int boxes, int truth_size, float *old_
 #ifdef OPENCV
 
 #include "http_stream.h"
-
+#include <random>
 data load_data_detection(int n, char **paths, int m, int w, int h, int c,
 		int boxes, int truth_size, int classes, int use_flip,
 		int use_gaussian_noise, int use_blur, int use_mixup, float jitter,
@@ -1056,15 +1056,19 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c,
 		int mini_batch, int track, int augment_speed, int letter_box,
 		int mosaic_bound, int contrastive, int contrastive_jit_flip,
 		int contrastive_color, int show_imgs) {
-    data d = {0};
-    d.shallow = 0;
-    d.X.rows = n;
-    d.X.vals = (float**)xcalloc(d.X.rows, sizeof(float*));
-    d.X.cols = h*w*c;
-	d.y = make_matrix(n, truth_size*boxes);
+	std::random_device rd;
+	std::mt19937 rg(rd());
+	using UNIFORM_FLOAT = std::uniform_real_distribution<float>;
+	using UNIFORM_INT = std::uniform_int_distribution<int>;
 
- 	char **random_paths;
+	char **random_paths;
 	random_paths = get_random_paths_custom(paths, n, m, contrastive);
+
+	data d = {0};
+	d.X.rows = n;
+	d.X.vals = (float**)xcalloc(d.X.rows, sizeof(float*));
+	d.X.cols = h * w * c;
+	d.y = make_matrix(n, truth_size * boxes);
 
 	for (int i = 0; i < n; ++i) {
 		float *truth = (float*)xcalloc(truth_size * boxes, sizeof(float));
@@ -1072,31 +1076,29 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c,
 		mat_cv *src = load_image_mat_cv(filename, (c >= 3));
 		assert(src != NULL);
 
-		int ori_h = get_height_mat(src);	// original height
-		int ori_w = get_width_mat(src);		// original width
-		int mc_w = (ori_w * jitter);		// maximum crop width
-		int mc_h = (ori_h * jitter);		// maximum crop height
-
+		float flip = use_flip ? rg() % 2 : 0;
+		UNIFORM_FLOAT randHue(-hue, hue);
+		UNIFORM_FLOAT randSat(1. / saturation, saturation);
+		UNIFORM_FLOAT randExp(1. / exposure, exposure);
 		int gaussian_noise = 0;
-		float flip = use_flip ? random_gen() % 2 : 0;
-		float dhue = rand_uniform_strong(-hue, hue);
-		float dsat = rand_scale(saturation);
-		float dexp = rand_scale(exposure);
 		float blur = 0;
 		if (use_blur) {
-			blur = rand_int(0, 2); // 0 - disable, 1 - blur background
-			if (blur == 2) { // 2 - blur the whole image by user setting
+			blur = rg() % 3;	// 0 - disable, 1 - blur background
+			if (blur == 2) {		// 2 - blur the whole image by user setting
 				blur = use_blur;
 			}
 		}
 
-		int crop_x =	rand_precalc_random(-mc_w, mc_w, random_float());
-		int crop_y =	rand_precalc_random(-mc_h, mc_h, random_float());
-		int delta_r =	rand_precalc_random(-mc_w, mc_w, random_float());
-		int delta_b =	rand_precalc_random(-mc_h, mc_h, random_float());
-		int crop_w =	ori_w - crop_x - delta_r;
-		int crop_h =	ori_h - crop_y - delta_b;
-
+		int ori_h = get_height_mat(src);// original height
+		int ori_w = get_width_mat(src);	// original width
+		int mc_w = (ori_w * jitter);	// maximum crop width
+		int mc_h = (ori_h * jitter);	// maximum crop height
+		UNIFORM_INT rand_w(-mc_w, mc_w);
+		UNIFORM_INT rand_h(-mc_h, mc_h);
+		int crop_x =	rand_w(rg);	// random offset of x coord
+		int crop_y =	rand_h(rg);	// random offset of y coord
+		int crop_w =	ori_w - crop_x - rand_w(rg);	// random offset of right
+		int crop_h =	ori_h - crop_y - rand_h(rg);	// random offset of bottom
 		float norm_x =	(float)crop_x / crop_w;
 		float norm_y =	(float)crop_y / crop_h;
 		float norm_w =	(float)ori_w / crop_w;
@@ -1108,8 +1110,8 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c,
 		}
 
 		image ai = image_data_augmentation(src, w, h, crop_x, crop_y,
-				crop_w, crop_h, flip, dhue, dsat, dexp, gaussian_noise, blur,
-				boxes, truth_size, truth);
+				crop_w, crop_h, flip, randHue(rg), randSat(rg), randExp(rg),
+				gaussian_noise, blur, boxes, truth_size, truth);
 		d.X.vals[i] = ai.data;
 		memcpy(d.y.vals[i], truth, truth_size * boxes * sizeof(float));
 		release_mat(&src);
