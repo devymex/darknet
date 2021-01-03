@@ -406,6 +406,12 @@ void *process_batch(void* ptr) {
 						box_index, i, j, l.w, l.h, state.net.w, state.net.h,
 						l.w * l.h, l.new_coords);
 				float best_match_iou = 0;
+				int class_id_match = 0;
+				for (int c = 0; c < l.classes; ++c) {
+					if (l.output[class_index + l.w * l.h * c] > 0.25) {
+						class_id_match = 1;
+					}
+				}
 				for (t = 0; t < l.max_boxes; ++t) {
 					box truth = float_to_box_stride(
 							state.truth + t * l.truth_size + b * l.truths, 1);
@@ -415,12 +421,6 @@ void *process_batch(void* ptr) {
 					float objectness = l.output[obj_index];
 					if (isnan(objectness) || isinf(objectness)) {
 						l.output[obj_index] = 0;
-					}
-					int class_id_match = 0;
-					for (int c = 0; c < l.classes; ++c) {
-						if (l.output[class_index + l.w * l.h * c] > 0.25) {
-							class_id_match = 1;
-						}
 					}
 					float iou = box_iou(pred, truth);
 					if (iou > best_match_iou && class_id_match == 1) {
