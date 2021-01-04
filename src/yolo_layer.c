@@ -497,6 +497,17 @@ void *process_batch(void* ptr) {
 
 void forward_yolo_layer(const layer l, network_state state) {
 	memcpy(l.output, state.input, l.outputs * l.batch * sizeof(float));
+#ifndef GPU
+	for (int b = 0; b < l.batch; ++b) {
+		for (int n = 0; n < l.n; ++n) {
+			int bbox_index = entry_index(l, b, n*l.w*l.h, 0);
+			activate_array(l.output + bbox_index, 2 * l.w*l.h, LOGISTIC);        // x,y,
+			int obj_index = entry_index(l, b, n*l.w*l.h, 4);
+			activate_array(l.output + obj_index, (1 + l.classes)*l.w*l.h, LOGISTIC);
+			scal_add_cpu(2 * l.w*l.h, l.scale_x_y, -0.5*(l.scale_x_y - 1), l.output + bbox_index, 1);
+		}
+	}
+#endif
 	memset(l.delta, 0, l.outputs * l.batch * sizeof(float));
 	if (!state.train) {
 		return;
